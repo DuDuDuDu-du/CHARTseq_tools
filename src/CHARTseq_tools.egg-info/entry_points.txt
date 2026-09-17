@@ -1,0 +1,3 @@
+[console_scripts]
+chartseq = chartseq_tools.cli:main
+chartseq-tools = chartseq_tools.cli:main

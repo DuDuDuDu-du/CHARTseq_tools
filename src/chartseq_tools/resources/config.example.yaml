@@ -1,0 +1,45 @@
+# Copy this file and replace reference paths for your system.
+references:
+  star_index: /path/to/STAR_index
+  gtf: /path/to/annotation.gtf
+  ref_flat: /path/to/annotation.refFlat   # optional
+  gene_body_bed: /path/to/gene_body.bed  # optional
+  transcript_fasta: /path/to/transcripts.fa  # optional, benchmark only
+  suppa_prefix: /path/to/suppa/event_prefix  # optional, benchmark only
+
+tools:
+  umi_tools: umi_tools
+  fastqc: fastqc
+  cutadapt: cutadapt
+  star: STAR
+  featurecounts: featureCounts
+  samtools: samtools
+  seqtk: seqtk
+  picard: picard
+  gene_body_coverage: geneBody_coverage.py
+  salmon: salmon
+  suppa: suppa.py
+
+library:
+  # UMI-tools string notation: C=cell barcode, X=UMI, N=discarded base.
+  # Regex patterns with named groups are also supported; set pattern_method: regex.
+  bc_pattern: CCCCCCCCXXXXXXXXXXXXXXXXXXX
+  bc_pattern2: CCCCCCCCNNNNNNXXXXXXXXXXXXXXXXXXX
+  pattern_method: string
+  post_extract_trim_r1: 19
+  post_extract_trim_r2: 19
+
+pipeline:
+  threads: 8
+  minimum_length: 20
+  quality_cutoff: "20,20"
+  adapters:
+    - AGATCGGAAGAG
+    - CTGTCTCTTATACACATCT
+    - A{7}
+    - T{7}
+    - C{7}
+    - G{7}
+  run_fastqc: true
+  keep_intermediates: false
+

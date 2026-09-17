@@ -1,0 +1,15 @@
+pandas>=1.5
+PyYAML>=6.0
+
+[all]
+pysam>=0.21
+matplotlib>=3.6
+
+[bam]
+pysam>=0.21
+
+[plot]
+matplotlib>=3.6
+
+[test]
+pytest>=7
