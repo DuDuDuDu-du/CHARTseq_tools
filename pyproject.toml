@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "CHARTseq_tools"
+version = "0.1.0"
+description = "Portable command-line tools for CHART-seq preprocessing, counting, QC and saturation analysis"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "pandas>=1.5",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+bam = ["pysam>=0.21"]
+plot = ["matplotlib>=3.6"]
+all = ["pysam>=0.21", "matplotlib>=3.6"]
+test = ["pytest>=7"]
+
+[project.scripts]
+chartseq = "chartseq_tools.cli:main"
+chartseq-tools = "chartseq_tools.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+chartseq_tools = ["resources/*.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
