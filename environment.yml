@@ -1,0 +1,25 @@
+name: chartseq-tools
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.9
+  - pip
+  - pandas>=1.5
+  - pyyaml>=6
+  - pysam>=0.21
+  - matplotlib>=3.6
+  - umi_tools
+  - fastqc
+  - cutadapt
+  - star
+  - subread
+  - samtools
+  - seqtk
+  - rseqc
+  - picard
+  - salmon
+  - suppa
+  - pip:
+      - -e .
+
