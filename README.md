@@ -1,2 +1,148 @@
 # CHARTseq_tools
-Scripts for analyzing CHART-seq data.
+
+`CHARTseq_tools` is an installable, server-friendly command-line toolkit for paired-end CHART-seq preprocessing, cell-barcode/UMI extraction, gene-by-cell count matrices, FASTQ/BAM splitting, sequencing-depth saturation, and selected RNA-seq benchmark summaries.
+
+The package replaces machine-specific shell scripts with a reproducible YAML configuration. It does not contain user names, private server paths, reference data, or raw sequencing data.
+
+## Installation
+
+Linux is recommended because STAR, Subread/featureCounts and the other bioinformatics executables are normally deployed on Linux servers.
+
+### Conda (recommended)
+
+```bash
+git clone https://github.com/DuDuDuDu-du/CHARTseq_tools.git
+cd CHARTseq_tools
+conda env create -f environment.yml
+conda activate chartseq-tools
+chartseq --help
+```
+
+### pip
+
+Install the Python package and optional plotting/BAM support:
+
+```bash
+python -m pip install ".[all]"
+```
+
+The main pipeline also expects `umi_tools`, `cutadapt`, `STAR`, `featureCounts` and `samtools` on `PATH`. Optional QC/benchmark commands use FastQC, Picard, RSeQC, Salmon and SUPPA2. The conda environment installs these programs.
+
+## Configure references and read structure
+
+```bash
+chartseq init-config chartseq.yaml
+```
+
+Edit `chartseq.yaml` and set at least `references.star_index` and `references.gtf`, then validate the environment:
+
+```bash
+chartseq doctor --config chartseq.yaml
+```
+
+The default library structure reproduces the original analysis:
+
+```yaml
+library:
+  bc_pattern: CCCCCCCCXXXXXXXXXXXXXXXXXXX
+  bc_pattern2: CCCCCCCCNNNNNNXXXXXXXXXXXXXXXXXXX
+  pattern_method: string
+  post_extract_trim_r1: 19
+  post_extract_trim_r2: 19
+```
+
+UMI-tools uses `C` for cell-barcode bases and `N` for UMI bases. These patterns are ordinary configuration values, so barcode and UMI positions and lengths are not fixed in the source code.
+
+Named groups must follow the UMI-tools regex conventions. Always confirm the biological read structure before changing patterns or trimming.
+
+## Run CHART-seq
+
+```bash
+chartseq run \
+  --read1 sample_R1.fastq.gz \
+  --read2 sample_R2.fastq.gz \
+  --sample sample \
+  --cells MixedCellsNumber \
+  --config chartseq.yaml \
+  --output results/sample
+```
+
+The workflow performs barcode whitelisting and extraction, configurable post-extraction trimming, adapter/quality trimming, STAR alignment, featureCounts assignment by both gene name and gene ID, per-cell UMI counting, matrix reshaping and summary generation. Completed non-empty outputs are reused;
+pass `--force` to rerun steps. Inspect commands without processing data with `--dry-run`.
+
+## Utility commands
+
+```bash
+# Split paired FASTQs using a whitelist and barcode in the read header
+chartseq split-fastq --read1 R1.fastq.gz --read2 R2.fastq.gz \
+  --whitelist whitelist.tsv --output cells/
+
+# Custom header format; named group is preferred
+chartseq split-fastq --read1 R1.fq.gz --read2 R2.fq.gz \
+  --whitelist whitelist.tsv --header-regex '_+(?P<barcode>[ACGT]{16})_' \
+  --output cells/
+
+# Split BAM without keeping thousands of files open simultaneously
+chartseq split-bam input.bam cells_bam/ --query-field -2 --index
+
+# Convert UMI-tools long counts to a matrix
+chartseq pivot-counts counts.tsv counts.matrix.tsv
+
+# Count detected genes per cell
+chartseq summarize-counts gene_id.matrix.tsv gene_name.matrix.tsv \
+  --threshold 0 --output summary.tsv
+```
+
+## Downsampling and saturation
+
+```bash
+chartseq downsample --read1 R1.fastq.gz --read2 R2.fastq.gz \
+  --depths 0.1 0.5 1 2 5 --output downsampled/
+```
+
+Run `chartseq run` for each generated pair. When the matrices are present:
+
+```bash
+chartseq summarize-downsample downsampled/ saturation/
+chartseq plot-saturation saturation/detected_genes.tsv saturation/genes.png --metric genes
+chartseq plot-saturation saturation/umi_counts.tsv saturation/umis.png --metric umis
+```
+
+To downsample and run all depths in one command (use `--jobs` cautiously, because each pipeline also uses the configured number of threads):
+
+```bash
+chartseq saturation-run --read1 R1.fastq.gz --read2 R2.fastq.gz \
+  --depths 0.1 0.5 1 2 5 --cells 16 --config chartseq.yaml \
+  --output saturation_runs/ --jobs 2
+```
+
+## Benchmark post-processing
+
+The duplicated single-end and paired-end helper scripts are merged into parameterized commands:
+
+```bash
+chartseq normalize-featurecounts GeneIdcount.txt GeneIdcount.txt.summary genes.tsv --paired
+
+chartseq isoform-summary --quant salmon_quant/quant.sf --genes genes.tsv \
+  --gene-map transcript_gene_name.tsv --transcript-lengths transcript_length.tsv \
+  --sample sample --output benchmark/
+
+chartseq summarize-splicing --sample sample --input suppa_results/ --output benchmark/
+```
+
+`--paired` labels the length- and library-size-normalized measure as FPKM; without it the label is RPKM. Reference mappings are explicit arguments rather than hidden absolute paths.
+
+The legacy conditional UMI-prefix removal is available in generalized form:
+
+```bash
+chartseq trim-prefix input.fastq.gz output.fastq.gz --prefix ATTGCGCAATG --length 22
+```
+
+## Reproducibility notes
+
+- Record the `CHARTseq_tools` version, YAML configuration, reference release, and external-tool versions with each analysis.
+- Use the same `seqtk` seed for R1 and R2; the `downsample` command does this.
+- `split-fastq` refuses to overwrite pre-existing per-cell FASTQs, preventing accidental duplicate appends.
+- `split-bam` uses temporary disk-backed spooling, avoiding operating-system file-descriptor limits for large barcode sets.
+
+
